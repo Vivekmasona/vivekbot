@@ -243,4 +243,118 @@ app.get('/download/video', async (req, res) => {
       return res.status(404).send('No suitable video format found');
     }
 
-    res.setHeader('Content-Disposition', `attachment;
+    res.setHeader('Content-Disposition', `attachment; filename="${sanitizedTitle}(vivek masona).mp4"`);
+    res.setHeader('Content-Type', 'video/mp4');
+    format.contentLength && res.setHeader('Content-Length', format.contentLength);
+
+    ytdl(videoURL, { format }).pipe(res);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+// Route to download low-quality audio
+app.get("/low-audio", async (req, res) => {
+  const url = req.query.url as string;
+  if (!url) {
+    return res.status(400).send('YouTube video URL parameter is missing.');
+  }
+
+  try {
+    ytdl(url, {
+      format: 'mp3',
+      filter: 'audioonly',
+      quality: 'lowest'
+    }).pipe(res);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error fetching low-quality audio.');
+  }
+});
+
+// Route to download video
+app.get("/download", function(req, res){
+  const URL = req.query.URL as string;
+  const sanitizedTitle = 'video'; // You should define a proper sanitizedTitle
+
+  if (!URL) {
+    return res.status(400).send('Missing video URL');
+  }
+
+  res.setHeader('Content-Disposition', `attachment; filename="${sanitizedTitle}(vivek masona).mp4"`);
+  ytdl(URL, { format: 'mp4' }).pipe(res);
+});
+
+// Route for direct audio download via a third-party API
+app.get('/dl', async (req: Request, res: Response) => {
+  const videoUrl = req.query.url as string;
+  if (!videoUrl) {
+    return res.status(400).send('Please provide a valid YouTube video URL as a query parameter');
+  }
+
+  const videoId = getYouTubeVideoId(videoUrl);
+  if (!videoId) {
+    return res.status(400).send('Invalid YouTube video URL');
+  }
+
+  const provider = 'https://api.cobalt.tools/api/json';
+  const streamUrl = `https://youtu.be/${videoId}`;
+  try {
+    const response = await axios.post(provider, {
+      url: streamUrl,
+      isAudioOnly: true,
+      aFormat: 'mp3',
+      filenamePattern: 'basic'
+    }, {
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
+    });
+    const result = response.data;
+    res.redirect(result.url);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to download audio: ' + error.message });
+  }
+});
+
+// Route to get YouTube video thumbnail image
+app.get('/img', async (req: Request, res: Response) => {
+  const videoId = req.query.videoId as string;
+
+  if (!videoId || typeof videoId !== 'string') {
+    return res.status(400).send('Invalid video ID');
+  }
+
+  const apiUrl = `https://youtubeforever.vercel.app/videoinfo/${videoId}`;
+
+  try {
+    const response = await axios.get(apiUrl);
+    const channelData = response.data;
+    const thumbnails = channelData.author.thumbnails;
+    const thumbnail176 = thumbnails.find((thumbnail: any) => thumbnail.width === 176 && thumbnail.height === 176);
+
+    if (thumbnail176) {
+      return res.redirect(thumbnail176.url);
+    } else {
+      return res.status(404).send('176x176 thumbnail not found');
+    }
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send('Error fetching data');
+  }
+});
+
+// Default route
+app.get('/', (req: Request, res: Response) => {
+  res.json({ query: 'None' });
+});
+
+// Error handling middleware
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  console.error(err.stack);
+  res.status(500).send('Something went wrong!');
+});
+
+app.listen(port, () => {
+  console.log(`Server running on http://localhost:${port}`);
+});
