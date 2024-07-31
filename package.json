@@ -1,12 +1,11 @@
 {
   "name": "youtube-downloader-expressjs",
   "version": "1.0.0",
-  "description": "A project combining an Express server and a Telegram bot for YouTube audio and video processing.",
-  "main": "dist/index.js",
+  "description": "",
+  "main": "index.ts",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts"
+    "start": "ts-node src/index.ts"
   },
   "author": "furyforever",
   "license": "ISC",
